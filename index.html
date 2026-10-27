@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D J.A.R.V.I.S. - Repeater & Command System</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #020813;
+            color: #00f3ff;
+            font-family: 'Courier New', Courier, monospace;
+            user-select: none;
+        }
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            cursor: grab;
+        }
+        #canvas-container:active {
+            cursor: grabbing;
+        }
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 2;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px;
+            box-sizing: border-box;
+            background: radial-gradient(circle, transparent 45%, rgba(0, 10, 20, 0.85) 100%);
+        }
+        header {
+            text-align: center;
+            text-shadow: 0 0 12px #00f3ff;
+        }
+        h1 {
+            margin: 0;
+            letter-spacing: 6px;
+            font-size: 28px;
+        }
+        #status {
+            font-size: 14px;
+            color: #00ffcc;
+            margin-top: 8px;
+            letter-spacing: 2px;
+        }
+        #command-hints {
+            font-size: 12px;
+            color: rgba(0, 243, 255, 0.7);
+            margin-top: 6px;
+        }
+        #transcript-box {
+            max-width: 650px;
+            text-align: center;
+            font-size: 18px;
+            min-height: 45px;
+            padding: 15px 25px;
+            border: 1px solid rgba(0, 243, 255, 0.4);
+            background: rgba(0, 25, 45, 0.6);
+            border-radius: 6px;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+            text-shadow: 0 0 6px #00f3ff;
+        }
+        #controls {
+            pointer-events: auto;
+            margin-bottom: 15px;
+        }
+        button {
+            background: rgba(0, 243, 255, 0.12);
+            color: #00f3ff;
+            border: 1px solid #00f3ff;
+            padding: 12px 32px;
+            font-family: inherit;
+            font-size: 16px;
+            letter-spacing: 3px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+            transition: all 0.25s ease;
+            text-transform: uppercase;
+        }
+        button:hover {
+            background: #00f3ff;
+            color: #020813;
+            box-shadow: 0 0 25px #00f3ff;
+        }
+    </style>
+    <!-- 3D Engine (Three.js) - Loads automatically via internet -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div id="hud">
+        <header>
+            <h1>J.A.R.V.I.S. 3D</h1>
+            <div id="status">SYSTEM STANDBY</div>
+            <div id="command-hints">Try commands: "Time", "Date", "Open YouTube", "Open Google", "Who are you" — or say anything to repeat!</div>
+        </header>
+
+        <div id="transcript-box">Click ACTIVATE below and speak...</div>
+
+        <div id="controls">
+            <button id="toggle-btn">ACTIVATE SYSTEM</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. 3D HOLOGRAM CORE SETUP (THREE.JS)
+        // ==========================================
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 5.5;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const coreGroup = new THREE.Group();
+        scene.add(coreGroup);
+
+        // Outer Wireframe Icosahedron
+        const coreGeo = new THREE.IcosahedronGeometry(1.1, 2);
+        const coreMat = new THREE.MeshBasicMaterial({
+            color: 0x00f3ff,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.75
+        });
+        const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+        coreGroup.add(coreMesh);
+
+        // Inner Energy Sphere
+        const innerGeo = new THREE.SphereGeometry(0.7, 32, 32);
+        const innerMat = new THREE.MeshBasicMaterial({
+            color: 0x0088ff,
+            transparent: true,
+            opacity: 0.4
+        });
+        const innerMesh = new THREE.Mesh(innerGeo, innerMat);
+        coreGroup.add(innerMesh);
+
+        // 3D Gyroscopic Rings
+        const rings = [];
+        for (let i = 0; i < 4; i++) {
+            const ringGeo = new THREE.TorusGeometry(1.5 + i * 0.32, 0.015, 16, 100);
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: 0x00f3ff,
+                transparent: true,
+                opacity: 0.6 - (i * 0.1)
+            });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.random() * Math.PI;
+            ring.rotation.y = Math.random() * Math.PI;
+            coreGroup.add(ring);
+            rings.push(ring);
+        }
+
+        // Floating Particle Field around Core
+        const particlesGeo = new THREE.BufferGeometry();
+        const particleCount = 250;
+        const posArray = new Float32Array(particleCount * 3);
+        for (let i = 0; i < particleCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 8;
+        }
+        particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particlesMat = new THREE.PointsMaterial({
+            size: 0.03,
+            color: 0x00f3ff,
+            transparent: true,
+            opacity: 0.6
+        });
+        const particleMesh = new THREE.Points(particlesGeo, particlesMat);
+        scene.add(particleMesh);
+
+        // Mouse / Touch Drag to Rotate 3D Core
+        let isDragging = false;
+        let prevMouse = { x: 0, y: 0 };
+        window.addEventListener('pointerdown', (e) => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
+        window.addEventListener('pointerup', () => { isDragging = false; });
+        window.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
+            const dx = (e.clientX - prevMouse.x) * 0.008;
+            const dy = (e.clientY - prevMouse.y) * 0.008;
+            coreGroup.rotation.y += dx;
+            coreGroup.rotation.x += dy;
+            prevMouse = { x: e.clientX, y: e.clientY };
+        });
+
+        let isSpeaking = false;
+        let isListening = false;
+        let pulsePhase = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            pulsePhase += 0.06;
+
+            coreMesh.rotation.y += 0.006;
+            coreMesh.rotation.x += 0.004;
+            particleMesh.rotation.y += 0.0015;
+
+            rings.forEach((ring, idx) => {
+                const dir = idx % 2 === 0 ? 1 : -1;
+                ring.rotation.x += 0.008 * dir;
+                ring.rotation.y += 0.01 * dir;
+            });
+
+            let targetScale = 1;
+            if (isSpeaking) {
+                targetScale = 1.2 + Math.sin(pulsePhase * 4) * 0.25 + (Math.random() * 0.12);
+                coreMat.color.setHex(0x00ffcc);
+            } else if (isListening) {
+                targetScale = 1.0 + Math.sin(pulsePhase * 1.5) * 0.07;
+                coreMat.color.setHex(0x00f3ff);
+            } else {
+                targetScale = 1.0;
+                coreMat.color.setHex(0x0066aa);
+            }
+
+            coreMesh.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.15);
+            innerMesh.scale.lerp(new THREE.Vector3(targetScale * 0.9, targetScale * 0.9, targetScale * 0.9), 0.15);
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // ==========================================
+        // 2. VOICE COMMANDS + REPEATER ENGINE
+        // ==========================================
+        const statusEl = document.getElementById('status');
+        const transcriptEl = document.getElementById('transcript-box');
+        const toggleBtn = document.getElementById('toggle-btn');
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const synth = window.speechSynthesis;
+
+        let recognition = null;
+        let systemActive = false;
+
+        if (!SpeechRecognition) {
+            statusEl.innerText = "USE GOOGLE CHROME OR EDGE FOR VOICE POWER";
+            toggleBtn.disabled = true;
+        } else {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                isListening = true;
+                statusEl.innerText = "LISTENING FOR VOICE...";
+            };
+
+            recognition.onresult = (event) => {
+                let transcript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    transcript += event.results[i][0].transcript;
+                }
+                transcriptEl.innerText = `You: "${transcript}"`;
+
+                if (event.results[0].isFinal) {
+                    processVoiceInput(transcript.trim());
+                }
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                if (systemActive && !isSpeaking) {
+                    try { recognition.start(); } catch (e) {}
+                } else if (!systemActive) {
+                    statusEl.innerText = "SYSTEM STANDBY";
+                }
+            };
+        }
+
+        function processVoiceInput(text) {
+            if (!text) return;
+            const lower = text.toLowerCase();
+            let reply = text; // Default: Repeater mode (repeats what you said)
+
+            // Check if user gave a specific command
+            if (lower.includes("time")) {
+                reply = "Current system time is " + new Date().toLocaleTimeString();
+            } else if (lower.includes("date")) {
+                reply = "Today's date is " + new Date().toDateString();
+            } else if (lower.includes("open youtube")) {
+                reply = "Opening YouTube right now.";
+                window.open("https://www.youtube.com", "_blank");
+            } else if (lower.includes("open google")) {
+                reply = "Launching Google search.";
+                window.open("https://www.google.com", "_blank");
+            } else if (lower.includes("who are you") || lower.includes("your name")) {
+                reply = "I am your 3D Jarvis repeater and command assistant.";
+            }
+
+            speakOut(reply);
+        }
+
+        function speakOut(text) {
+            isSpeaking = true;
+            statusEl.innerText = "SPEAKING...";
+            transcriptEl.innerText = `JARVIS: "${text}"`;
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.pitch = 0.9;
+            utterance.rate = 1.05;
+
+            utterance.onend = () => {
+                isSpeaking = false;
+                if (systemActive) {
+                    statusEl.innerText = "LISTENING FOR VOICE...";
+                    try { recognition.start(); } catch (e) {}
+                } else {
+                    statusEl.innerText = "SYSTEM STANDBY";
+                }
+            };
+
+            synth.speak(utterance);
+        }
+
+        toggleBtn.addEventListener('click', () => {
+            if (!recognition) return;
+            systemActive = !systemActive;
+            if (systemActive) {
+                toggleBtn.innerText = "DEACTIVATE SYSTEM";
+                speakOut("Systems online. I am listening.");
+            } else {
+                toggleBtn.innerText = "ACTIVATE SYSTEM";
+                synth.cancel();
+                recognition.stop();
+                isSpeaking = false;
+                isListening = false;
+                statusEl.innerText = "SYSTEM STANDBY";
+            }
+        });
+    </script>
+</body>
+</html>
