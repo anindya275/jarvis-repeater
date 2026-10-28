@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D J.A.R.V.I.S. - Repeater & Command System</title>
+    <title>REPEATER 3D - AI Assistant</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #020813;
+            background-color: #01090d;
             color: #00f3ff;
             font-family: 'Courier New', Courier, monospace;
             user-select: none;
@@ -25,13 +25,32 @@
         #canvas-container:active {
             cursor: grabbing;
         }
+        /* Center Holographic REPEATER Animation (Like the Video) */
+        #center-logo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 7px;
+            color: #00ffcc;
+            text-shadow: 0 0 10px #00ffcc, 0 0 25px #00f3ff, 0 0 40px #0088ff;
+            z-index: 2;
+            pointer-events: none;
+            animation: holoPulse 2.2s ease-in-out infinite alternate;
+        }
+        @keyframes holoPulse {
+            0% { opacity: 0.45; transform: translate(-50%, -50%) scale(0.92); letter-spacing: 6px; }
+            100% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); letter-spacing: 9px; }
+        }
         #hud {
             position: absolute;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            z-index: 2;
+            z-index: 3;
             pointer-events: none;
             display: flex;
             flex-direction: column;
@@ -39,78 +58,91 @@
             align-items: center;
             padding: 25px;
             box-sizing: border-box;
-            background: radial-gradient(circle, transparent 45%, rgba(0, 10, 20, 0.85) 100%);
+            background: radial-gradient(circle, transparent 40%, rgba(0, 12, 18, 0.88) 100%);
         }
         header {
             text-align: center;
             text-shadow: 0 0 12px #00f3ff;
+            width: 100%;
+            position: relative;
         }
         h1 {
             margin: 0;
-            letter-spacing: 6px;
-            font-size: 28px;
+            letter-spacing: 8px;
+            font-size: 26px;
+            color: #00ffcc;
         }
         #status {
-            font-size: 14px;
-            color: #00ffcc;
-            margin-top: 8px;
+            font-size: 13px;
+            color: #00f3ff;
+            margin-top: 6px;
             letter-spacing: 2px;
         }
-        #command-hints {
+        #api-btn {
+            position: absolute;
+            top: 0;
+            right: 10px;
+            pointer-events: auto;
             font-size: 12px;
-            color: rgba(0, 243, 255, 0.7);
-            margin-top: 6px;
+            padding: 8px 14px;
+            letter-spacing: 1px;
         }
         #transcript-box {
-            max-width: 650px;
+            max-width: 680px;
             text-align: center;
-            font-size: 18px;
+            font-size: 17px;
             min-height: 45px;
+            margin-top: auto;
+            margin-bottom: 25px;
             padding: 15px 25px;
-            border: 1px solid rgba(0, 243, 255, 0.4);
-            background: rgba(0, 25, 45, 0.6);
+            border: 1px solid rgba(0, 255, 204, 0.4);
+            background: rgba(0, 22, 32, 0.65);
             border-radius: 6px;
             box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
-            text-shadow: 0 0 6px #00f3ff;
+            text-shadow: 0 0 5px #00f3ff;
         }
         #controls {
             pointer-events: auto;
-            margin-bottom: 15px;
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
         }
         button {
             background: rgba(0, 243, 255, 0.12);
-            color: #00f3ff;
-            border: 1px solid #00f3ff;
-            padding: 12px 32px;
+            color: #00ffcc;
+            border: 1px solid #00ffcc;
+            padding: 12px 28px;
             font-family: inherit;
-            font-size: 16px;
+            font-size: 15px;
             letter-spacing: 3px;
             cursor: pointer;
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.35);
             transition: all 0.25s ease;
             text-transform: uppercase;
         }
         button:hover {
-            background: #00f3ff;
-            color: #020813;
-            box-shadow: 0 0 25px #00f3ff;
+            background: #00ffcc;
+            color: #01090d;
+            box-shadow: 0 0 25px #00ffcc;
         }
     </style>
-    <!-- 3D Engine (Three.js) - Loads automatically via internet -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
     <div id="canvas-container"></div>
 
+    <!-- Center Animation Text inside the 3D Orb -->
+    <div id="center-logo">REPEATER</div>
+
     <div id="hud">
         <header>
-            <h1>J.A.R.V.I.S. 3D</h1>
+            <h1>R.E.P.E.A.T.E.R.</h1>
             <div id="status">SYSTEM STANDBY</div>
-            <div id="command-hints">Try commands: "Time", "Date", "Open YouTube", "Open Google", "Who are you" — or say anything to repeat!</div>
+            <button id="api-btn">🔑 SET AI KEY</button>
         </header>
 
-        <div id="transcript-box">Click ACTIVATE below and speak...</div>
+        <div id="transcript-box">Click ACTIVATE SYSTEM to boot Repeater AI...</div>
 
         <div id="controls">
             <button id="toggle-btn">ACTIVATE SYSTEM</button>
@@ -119,7 +151,7 @@
 
     <script>
         // ==========================================
-        // 1. 3D HOLOGRAM CORE SETUP (THREE.JS)
+        // 1. 3D HOLOGRAM CORE (THREE.JS)
         // ==========================================
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
@@ -134,33 +166,33 @@
         const coreGroup = new THREE.Group();
         scene.add(coreGroup);
 
-        // Outer Wireframe Icosahedron
-        const coreGeo = new THREE.IcosahedronGeometry(1.1, 2);
+        // Inner Wireframe Sphere
+        const coreGeo = new THREE.IcosahedronGeometry(1.05, 2);
         const coreMat = new THREE.MeshBasicMaterial({
-            color: 0x00f3ff,
+            color: 0x00ffcc,
             wireframe: true,
             transparent: true,
-            opacity: 0.75
+            opacity: 0.65
         });
         const coreMesh = new THREE.Mesh(coreGeo, coreMat);
         coreGroup.add(coreMesh);
 
-        // Inner Energy Sphere
-        const innerGeo = new THREE.SphereGeometry(0.7, 32, 32);
+        // Deep Glowing Core
+        const innerGeo = new THREE.SphereGeometry(0.68, 32, 32);
         const innerMat = new THREE.MeshBasicMaterial({
             color: 0x0088ff,
             transparent: true,
-            opacity: 0.4
+            opacity: 0.35
         });
         const innerMesh = new THREE.Mesh(innerGeo, innerMat);
         coreGroup.add(innerMesh);
 
-        // 3D Gyroscopic Rings
+        // Gyroscopic Rings
         const rings = [];
         for (let i = 0; i < 4; i++) {
-            const ringGeo = new THREE.TorusGeometry(1.5 + i * 0.32, 0.015, 16, 100);
+            const ringGeo = new THREE.TorusGeometry(1.55 + i * 0.32, 0.016, 16, 100);
             const ringMat = new THREE.MeshBasicMaterial({
-                color: 0x00f3ff,
+                color: i % 2 === 0 ? 0x00ffcc : 0x00f3ff,
                 transparent: true,
                 opacity: 0.6 - (i * 0.1)
             });
@@ -171,39 +203,38 @@
             rings.push(ring);
         }
 
-        // Floating Particle Field around Core
+        // Particle Field
         const particlesGeo = new THREE.BufferGeometry();
         const particleCount = 250;
         const posArray = new Float32Array(particleCount * 3);
         for (let i = 0; i < particleCount * 3; i++) {
-            posArray[i] = (Math.random() - 0.5) * 8;
+            posArray[i] = (Math.random() - 0.5) * 9;
         }
         particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
         const particlesMat = new THREE.PointsMaterial({
             size: 0.03,
-            color: 0x00f3ff,
+            color: 0x00ffcc,
             transparent: true,
-            opacity: 0.6
+            opacity: 0.5
         });
         const particleMesh = new THREE.Points(particlesGeo, particlesMat);
         scene.add(particleMesh);
 
-        // Mouse / Touch Drag to Rotate 3D Core
+        // Mouse Drag Rotation
         let isDragging = false;
         let prevMouse = { x: 0, y: 0 };
         window.addEventListener('pointerdown', (e) => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
         window.addEventListener('pointerup', () => { isDragging = false; });
         window.addEventListener('pointermove', (e) => {
             if (!isDragging) return;
-            const dx = (e.clientX - prevMouse.x) * 0.008;
-            const dy = (e.clientY - prevMouse.y) * 0.008;
-            coreGroup.rotation.y += dx;
-            coreGroup.rotation.x += dy;
+            coreGroup.rotation.y += (e.clientX - prevMouse.x) * 0.008;
+            coreGroup.rotation.x += (e.clientY - prevMouse.y) * 0.008;
             prevMouse = { x: e.clientX, y: e.clientY };
         });
 
         let isSpeaking = false;
         let isListening = false;
+        let isThinking = false;
         let pulsePhase = 0;
 
         function animate() {
@@ -216,20 +247,24 @@
 
             rings.forEach((ring, idx) => {
                 const dir = idx % 2 === 0 ? 1 : -1;
-                ring.rotation.x += 0.008 * dir;
-                ring.rotation.y += 0.01 * dir;
+                const speed = isThinking ? 0.03 : 0.008;
+                ring.rotation.x += speed * dir;
+                ring.rotation.y += (speed * 1.2) * dir;
             });
 
             let targetScale = 1;
             if (isSpeaking) {
-                targetScale = 1.2 + Math.sin(pulsePhase * 4) * 0.25 + (Math.random() * 0.12);
+                targetScale = 1.22 + Math.sin(pulsePhase * 4) * 0.25 + (Math.random() * 0.1);
                 coreMat.color.setHex(0x00ffcc);
+            } else if (isThinking) {
+                targetScale = 0.9 + Math.sin(pulsePhase * 6) * 0.1;
+                coreMat.color.setHex(0xffaa00); // Glows orange/gold when AI is thinking
             } else if (isListening) {
                 targetScale = 1.0 + Math.sin(pulsePhase * 1.5) * 0.07;
                 coreMat.color.setHex(0x00f3ff);
             } else {
                 targetScale = 1.0;
-                coreMat.color.setHex(0x0066aa);
+                coreMat.color.setHex(0x007799);
             }
 
             coreMesh.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.15);
@@ -246,20 +281,37 @@
         });
 
         // ==========================================
-        // 2. VOICE COMMANDS + REPEATER ENGINE
+        // 2. GEMINI AI BRAIN + VOICE ENGINE
         // ==========================================
         const statusEl = document.getElementById('status');
         const transcriptEl = document.getElementById('transcript-box');
         const toggleBtn = document.getElementById('toggle-btn');
+        const apiBtn = document.getElementById('api-btn');
+        const centerLogo = document.getElementById('center-logo');
+
+        let geminiApiKey = localStorage.getItem('REPEATER_GEMINI_KEY') || '';
+        updateApiBtnText();
+
+        apiBtn.addEventListener('click', () => {
+            const key = prompt("Paste your Google Gemini API Key (It stays saved privately in your browser):", geminiApiKey);
+            if (key !== null) {
+                geminiApiKey = key.trim();
+                localStorage.setItem('REPEATER_GEMINI_KEY', geminiApiKey);
+                updateApiBtnText();
+            }
+        });
+
+        function updateApiBtnText() {
+            apiBtn.innerText = geminiApiKey ? "✅ AI BRAIN ACTIVE" : "🔑 SET AI KEY";
+        }
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const synth = window.speechSynthesis;
-
         let recognition = null;
         let systemActive = false;
 
         if (!SpeechRecognition) {
-            statusEl.innerText = "USE GOOGLE CHROME OR EDGE FOR VOICE POWER";
+            statusEl.innerText = "USE CHROME OR EDGE FOR VOICE RECOGNITION";
             toggleBtn.disabled = true;
         } else {
             recognition = new SpeechRecognition();
@@ -269,7 +321,7 @@
 
             recognition.onstart = () => {
                 isListening = true;
-                statusEl.innerText = "LISTENING FOR VOICE...";
+                statusEl.innerText = "LISTENING...";
             };
 
             recognition.onresult = (event) => {
@@ -280,13 +332,13 @@
                 transcriptEl.innerText = `You: "${transcript}"`;
 
                 if (event.results[0].isFinal) {
-                    processVoiceInput(transcript.trim());
+                    processBrain(transcript.trim());
                 }
             };
 
             recognition.onend = () => {
                 isListening = false;
-                if (systemActive && !isSpeaking) {
+                if (systemActive && !isSpeaking && !isThinking) {
                     try { recognition.start(); } catch (e) {}
                 } else if (!systemActive) {
                     statusEl.innerText = "SYSTEM STANDBY";
@@ -294,33 +346,68 @@
             };
         }
 
-        function processVoiceInput(text) {
+        async function processBrain(text) {
             if (!text) return;
             const lower = text.toLowerCase();
-            let reply = text; // Default: Repeater mode (repeats what you said)
 
-            // Check if user gave a specific command
-            if (lower.includes("time")) {
-                reply = "Current system time is " + new Date().toLocaleTimeString();
-            } else if (lower.includes("date")) {
-                reply = "Today's date is " + new Date().toDateString();
-            } else if (lower.includes("open youtube")) {
-                reply = "Opening YouTube right now.";
+            // 1. Instant System Commands
+            if (lower.includes("current time") || lower === "what is the time") {
+                centerLogo.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                setTimeout(() => { centerLogo.innerText = "REPEATER"; }, 5000);
+                return speakOut("Current time is " + new Date().toLocaleTimeString());
+            }
+            if (lower.startsWith("open youtube")) {
                 window.open("https://www.youtube.com", "_blank");
-            } else if (lower.includes("open google")) {
-                reply = "Launching Google search.";
+                return speakOut("Opening YouTube, sir.");
+            }
+            if (lower.startsWith("open google")) {
                 window.open("https://www.google.com", "_blank");
-            } else if (lower.includes("who are you") || lower.includes("your name")) {
-                reply = "I am your 3D Jarvis repeater and command assistant.";
+                return speakOut("Opening Google.");
+            }
+            if (lower.startsWith("repeat after me ")) {
+                const toRepeat = text.replace(/repeat after me /i, "");
+                return speakOut(toRepeat);
             }
 
-            speakOut(reply);
+            // 2. Real Gemini AI Brain (if API Key is set)
+            if (geminiApiKey) {
+                isThinking = true;
+                statusEl.innerText = "THINKING (GEMINI AI)...";
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{
+                                    text: `You are REPEATER, a futuristic 3D AI voice assistant inspired by JARVIS. Reply in 1 or 2 short, crisp, spoken sentences without markdown or asterisks. User said: "${text}"`
+                                }]
+                            }]
+                        })
+                    });
+                    const data = await response.json();
+                    isThinking = false;
+
+                    if (data.candidates && data.candidates[0].content.parts[0].text) {
+                        const aiReply = data.candidates[0].content.parts[0].text.replace(/[*#]/g, '');
+                        return speakOut(aiReply);
+                    } else {
+                        return speakOut("My AI neural network returned an empty response. Please check your API key.");
+                    }
+                } catch (err) {
+                    isThinking = false;
+                    return speakOut("Error connecting to Gemini AI server.");
+                }
+            }
+
+            // 3. Fallback: Repeater Mode (if no API key is entered yet)
+            speakOut(text);
         }
 
         function speakOut(text) {
             isSpeaking = true;
-            statusEl.innerText = "SPEAKING...";
-            transcriptEl.innerText = `JARVIS: "${text}"`;
+            statusEl.innerText = "REPEATER SPEAKING...";
+            transcriptEl.innerText = `REPEATER: "${text}"`;
 
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.pitch = 0.9;
@@ -329,7 +416,7 @@
             utterance.onend = () => {
                 isSpeaking = false;
                 if (systemActive) {
-                    statusEl.innerText = "LISTENING FOR VOICE...";
+                    statusEl.innerText = "LISTENING...";
                     try { recognition.start(); } catch (e) {}
                 } else {
                     statusEl.innerText = "SYSTEM STANDBY";
@@ -344,13 +431,14 @@
             systemActive = !systemActive;
             if (systemActive) {
                 toggleBtn.innerText = "DEACTIVATE SYSTEM";
-                speakOut("Systems online. I am listening.");
+                speakOut("Allow me to introduce myself. I am Repeater, a virtual artificial intelligence, and my systems are now fully operational.");
             } else {
                 toggleBtn.innerText = "ACTIVATE SYSTEM";
                 synth.cancel();
                 recognition.stop();
                 isSpeaking = false;
                 isListening = false;
+                isThinking = false;
                 statusEl.innerText = "SYSTEM STANDBY";
             }
         });
