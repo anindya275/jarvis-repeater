@@ -404,7 +404,8 @@
             speakOut(text);
         }
 
-        function speakOut(text) {
+      function speakOut(text) {
+            synth.cancel();
             isSpeaking = true;
             statusEl.innerText = "REPEATER SPEAKING...";
             transcriptEl.innerText = `REPEATER: "${text}"`;
@@ -413,10 +414,22 @@
             utterance.pitch = 0.9;
             utterance.rate = 1.05;
 
+            // Backup Timer: Agar browser onend bhool jaye, toh bhi mic chalu ho jayega!
+            const backupTimer = setTimeout(() => {
+                if (isSpeaking) {
+                    isSpeaking = false;
+                    if (systemActive) {
+                        statusEl.innerText = "🟢 LISTENING... SPEAK NOW!";
+                        try { recognition.start(); } catch (e) {}
+                    }
+                }
+            }, Math.max(3000, text.length * 85));
+
             utterance.onend = () => {
+                clearTimeout(backupTimer);
                 isSpeaking = false;
                 if (systemActive) {
-                    statusEl.innerText = "LISTENING...";
+                    statusEl.innerText = "🟢 LISTENING... SPEAK NOW!";
                     try { recognition.start(); } catch (e) {}
                 } else {
                     statusEl.innerText = "SYSTEM STANDBY";
@@ -424,7 +437,7 @@
             };
 
             synth.speak(utterance);
-        }
+        } 
 
         toggleBtn.addEventListener('click', () => {
             if (!recognition) return;
