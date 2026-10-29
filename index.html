@@ -150,13 +150,13 @@
     </div>
 
     <script>
-        // ==========================================
-        // 1. 3D HOLOGRAM CORE (THREE.JS)
+       // ==========================================
+        // 1. NEXT-LEVEL 3D SCI-FI ARC REACTOR CORE
         // ==========================================
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 5.5;
+        camera.position.z = 6.2;
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -164,63 +164,106 @@
         container.appendChild(renderer.domElement);
 
         const coreGroup = new THREE.Group();
+        coreGroup.position.y = 0.2;
         scene.add(coreGroup);
 
-        // Inner Wireframe Sphere
-        const coreGeo = new THREE.IcosahedronGeometry(1.05, 2);
-        const coreMat = new THREE.MeshBasicMaterial({
-            color: 0x00ffcc,
-            wireframe: true,
-            transparent: true,
-            opacity: 0.65
-        });
-        const coreMesh = new THREE.Mesh(coreGeo, coreMat);
-        coreGroup.add(coreMesh);
-
-        // Deep Glowing Core
-        const innerGeo = new THREE.SphereGeometry(0.68, 32, 32);
+        // A. Inner Glowing Plasma Sphere + Dual Cage
+        const innerGeo = new THREE.SphereGeometry(0.65, 32, 32);
         const innerMat = new THREE.MeshBasicMaterial({
             color: 0x0088ff,
             transparent: true,
-            opacity: 0.35
+            opacity: 0.45,
+            blending: THREE.AdditiveBlending
         });
         const innerMesh = new THREE.Mesh(innerGeo, innerMat);
         coreGroup.add(innerMesh);
 
-        // Gyroscopic Rings
-        const rings = [];
-        for (let i = 0; i < 4; i++) {
-            const ringGeo = new THREE.TorusGeometry(1.55 + i * 0.32, 0.016, 16, 100);
-            const ringMat = new THREE.MeshBasicMaterial({
-                color: i % 2 === 0 ? 0x00ffcc : 0x00f3ff,
-                transparent: true,
-                opacity: 0.6 - (i * 0.1)
-            });
-            const ring = new THREE.Mesh(ringGeo, ringMat);
-            ring.rotation.x = Math.random() * Math.PI;
-            ring.rotation.y = Math.random() * Math.PI;
-            coreGroup.add(ring);
-            rings.push(ring);
-        }
+        const coreGeo = new THREE.IcosahedronGeometry(0.95, 2);
+        const coreMat = new THREE.MeshBasicMaterial({
+            color: 0x00ffcc,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.7,
+            blending: THREE.AdditiveBlending
+        });
+        const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+        coreGroup.add(coreMesh);
 
-        // Particle Field
+        // B. 3D Segmented Stark-Tech Arcs (Broken Glowing Rings)
+        const segmentedArcs = [];
+        const arcConfigs = [
+            { radius: 1.35, tube: 0.025, segments: 3, arcLen: 1.4, color: 0x00ffcc, speed: 0.015 },
+            { radius: 1.65, tube: 0.018, segments: 4, arcLen: 0.9, color: 0x00f3ff, speed: -0.012 },
+            { radius: 2.15, tube: 0.032, segments: 2, arcLen: 1.8, color: 0x0088ff, speed: 0.009 },
+            { radius: 2.45, tube: 0.012, segments: 6, arcLen: 0.5, color: 0x00ffcc, speed: -0.018 }
+        ];
+
+        arcConfigs.forEach((cfg, idx) => {
+            const arcGroup = new THREE.Group();
+            for (let i = 0; i < cfg.segments; i++) {
+                // Creates partial arc instead of boring full circle
+                const geo = new THREE.TorusGeometry(cfg.radius, cfg.tube, 16, 60, cfg.arcLen);
+                const mat = new THREE.MeshBasicMaterial({
+                    color: cfg.color,
+                    transparent: true,
+                    opacity: 0.85,
+                    blending: THREE.AdditiveBlending
+                });
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.rotation.z = (i * Math.PI * 2) / cfg.segments;
+                arcGroup.add(mesh);
+            }
+            // Give each arc layer a unique 3D gyroscopic tilt
+            arcGroup.rotation.x = (idx * 0.6) + 0.3;
+            arcGroup.rotation.y = (idx * 0.5);
+            arcGroup.userData = { speed: cfg.speed, idx: idx };
+            coreGroup.add(arcGroup);
+            segmentedArcs.push(arcGroup);
+        });
+
+        // C. 64 Radial Equalizer Spikes (Inspired by your 2D PERIGAL HUD!)
+        const eqGroup = new THREE.Group();
+        const eqBars = [];
+        const barCount = 64;
+        const eqRadius = 1.88;
+
+        for (let i = 0; i < barCount; i++) {
+            const angle = (i / barCount) * Math.PI * 2;
+            const barGeo = new THREE.BoxGeometry(0.12, 0.025, 0.025);
+            const barMat = new THREE.MeshBasicMaterial({
+                color: i % 2 === 0 ? 0x00ffcc : 0x00aaff,
+                transparent: true,
+                opacity: 0.85,
+                blending: THREE.AdditiveBlending
+            });
+            const bar = new THREE.Mesh(barGeo, barMat);
+            bar.position.x = Math.cos(angle) * eqRadius;
+            bar.position.y = Math.sin(angle) * eqRadius;
+            bar.rotation.z = angle;
+            eqGroup.add(bar);
+            eqBars.push(bar);
+        }
+        coreGroup.add(eqGroup);
+
+        // D. Outer Floating Hologram Dust
         const particlesGeo = new THREE.BufferGeometry();
-        const particleCount = 250;
+        const particleCount = 300;
         const posArray = new Float32Array(particleCount * 3);
         for (let i = 0; i < particleCount * 3; i++) {
-            posArray[i] = (Math.random() - 0.5) * 9;
+            posArray[i] = (Math.random() - 0.5) * 10;
         }
         particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
         const particlesMat = new THREE.PointsMaterial({
-            size: 0.03,
+            size: 0.035,
             color: 0x00ffcc,
             transparent: true,
-            opacity: 0.5
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending
         });
         const particleMesh = new THREE.Points(particlesGeo, particlesMat);
         scene.add(particleMesh);
 
-        // Mouse Drag Rotation
+        // E. Mouse / Touch 360 Drag Control
         let isDragging = false;
         let prevMouse = { x: 0, y: 0 };
         window.addEventListener('pointerdown', (e) => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
@@ -232,41 +275,58 @@
             prevMouse = { x: e.clientX, y: e.clientY };
         });
 
-        let isSpeaking = false;
-        let isListening = false;
-        let isThinking = false;
-        let pulsePhase = 0;
+        let isSpeaking = false, isListening = false, isThinking = false, pulsePhase = 0;
 
         function animate() {
             requestAnimationFrame(animate);
-            pulsePhase += 0.06;
+            pulsePhase += 0.07;
 
-            coreMesh.rotation.y += 0.006;
-            coreMesh.rotation.x += 0.004;
+            // Rotate inner core & particles
+            coreMesh.rotation.y += 0.008;
+            coreMesh.rotation.x -= 0.005;
             particleMesh.rotation.y += 0.0015;
 
-            rings.forEach((ring, idx) => {
-                const dir = idx % 2 === 0 ? 1 : -1;
-                const speed = isThinking ? 0.03 : 0.008;
-                ring.rotation.x += speed * dir;
-                ring.rotation.y += (speed * 1.2) * dir;
+            // 1. Animate Segmented 3D Arcs
+            segmentedArcs.forEach((arcGroup) => {
+                const boost = isThinking ? 3.5 : (isSpeaking ? 1.8 : 1);
+                arcGroup.rotation.z += arcGroup.userData.speed * boost;
+                arcGroup.rotation.x += (arcGroup.userData.speed * 0.35) * boost;
+                arcGroup.rotation.y += (arcGroup.userData.speed * 0.25) * boost;
             });
 
+            // 2. Animate 64 Equalizer Spikes (Audio-Reactive Wave)
+            eqGroup.rotation.z -= 0.003;
+            eqBars.forEach((bar, i) => {
+                let wave = 1;
+                if (isSpeaking) {
+                    // Wild audio visualizer spikes when Repeater speaks!
+                    wave = 1 + Math.abs(Math.sin(pulsePhase * 3 + i * 0.4)) * 3.8 + Math.random() * 1.5;
+                } else if (isThinking) {
+                    // Fast scanning wave when Gemini AI is thinking
+                    wave = 1 + Math.abs(Math.sin(pulsePhase * 6 - i * 0.2)) * 2.5;
+                } else if (isListening) {
+                    // Gentle breathing wave when listening
+                    wave = 1 + Math.abs(Math.sin(pulsePhase * 1.5 + i * 0.3)) * 1.2;
+                }
+                bar.scale.x = THREE.MathUtils.lerp(bar.scale.x, wave, 0.2);
+            });
+
+            // 3. State Color & Core Pulse
             let targetScale = 1;
+            let themeColor = 0x007799;
+
             if (isSpeaking) {
-                targetScale = 1.22 + Math.sin(pulsePhase * 4) * 0.25 + (Math.random() * 0.1);
-                coreMat.color.setHex(0x00ffcc);
+                targetScale = 1.25 + Math.sin(pulsePhase * 4) * 0.22;
+                themeColor = 0x00ffcc; // Neon Cyan-Green
             } else if (isThinking) {
-                targetScale = 0.9 + Math.sin(pulsePhase * 6) * 0.1;
-                coreMat.color.setHex(0xffaa00); // Glows orange/gold when AI is thinking
+                targetScale = 0.9 + Math.sin(pulsePhase * 7) * 0.12;
+                themeColor = 0xffaa00; // Gold/Orange when AI thinks
             } else if (isListening) {
-                targetScale = 1.0 + Math.sin(pulsePhase * 1.5) * 0.07;
-                coreMat.color.setHex(0x00f3ff);
-            } else {
-                targetScale = 1.0;
-                coreMat.color.setHex(0x007799);
+                targetScale = 1.06 + Math.sin(pulsePhase * 2) * 0.07;
+                themeColor = 0x00ff66; // Emerald Green when Mic is ready
             }
 
+            coreMat.color.setHex(themeColor);
             coreMesh.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.15);
             innerMesh.scale.lerp(new THREE.Vector3(targetScale * 0.9, targetScale * 0.9, targetScale * 0.9), 0.15);
 
@@ -279,7 +339,6 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
-
         // ==========================================
         // 2. GEMINI AI BRAIN + VOICE ENGINE
         // ==========================================
